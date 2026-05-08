@@ -3,43 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Document Assistant</title>
+    <title>LawBot Pro</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
 </head>
 <body>
     <div id="sidebar">
-        <h2>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6;"><path d="M12 2a2 2 0 0 1 2 2c-.11.88-.34 1.5-.7 1.85-.36.35-1 .57-1.3.65a2 2 0 0 0-2 2v1h4a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4v1a2 2 0 0 0 2 2 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 2 2 0 0 0 2-2v-1H2a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1a2 2 0 0 0 2-2v-2a2 2 0 0 1 2-2h4v-1a2 2 0 0 0-2-2 2 2 0 0 1 2-2z"/></svg>
-            Cấu hình
-        </h2>
-        <div>
-            <label for="api-key-input">Gemini API Key</label>
-            <input type="password" id="api-key-input" placeholder="Nhập API Key để bắt đầu...">
+        <h2 class="brand"><span class="brand-icon">⚖️</span> TT99_Q&A</h2>
+        
+        <div class="api-key-section">
+            <label for="api-key-input">Google Gemini API Key</label>
+            <input type="password" id="api-key-input" placeholder="••••••••••••••••••••••••••">
+            <button id="save-api-btn" onclick="saveApiKey()">Lưu Key</button>
+            <div class="api-key-hint">Nhận API Key miễn phí tại <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a></div>
+            <div id="save-api-status" style="display: none; color: #10b981; font-size: 0.8rem; margin-top: 5px; text-align: center;">Đã lưu thành công!</div>
+        </div>
+
+        <div class="database-section">
+            <h3>CƠ SỞ DỮ LIỆU:</h3>
+            <ul class="file-list">
+                {% for file in pdf_files %}
+                <li>
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    <span>{{ file }}</span>
+                </li>
+                {% else %}
+                <li style="color: #64748b; font-style: italic;">Chưa có tài liệu nào</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
+    
     <div id="main-chat">
         <div id="chat-header">
-            <h1>AI Document Assistant</h1>
+            <div class="status-indicator">
+                <span class="online-dot"></span>
+                <h1>Trợ lý Pháp Luật (AI)</h1>
+            </div>
         </div>
         
         <div id="chat-history">
             <div class="message bot">
-                <p>Xin chào! Tôi đã sẵn sàng hỗ trợ bạn phân tích các tài liệu PDF. Hãy nhập câu hỏi của bạn xuống bên dưới.</p>
+                <div class="avatar ai">AI</div>
+                <div class="message-content">
+                    <p>Xin chào! Tôi là trợ lý ảo về thông tư 99/2025/BTC, bạn cần hỏi vấn đề gì?</p>
+                </div>
             </div>
         </div>
         
         <div class="typing-indicator" id="typing-indicator">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
+            <div class="avatar ai">AI</div>
+            <div class="message-content indicator-content">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
         </div>
 
         <div id="input-container">
             <div id="input-area">
-                <input type="text" id="message-input" placeholder="Nhập câu hỏi của bạn về tài liệu..." autocomplete="off">
-                <button id="send-button" onclick="sendMessage()">Gửi</button>
+                <input type="text" id="message-input" placeholder="Nhập câu hỏi của bạn (ví dụ: Đối tượng nào được miễn thuế?)..." autocomplete="off">
+                <button id="send-button" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
             </div>
         </div>
     </div>
@@ -52,9 +79,22 @@
             }
         });
 
-        document.getElementById('api-key-input').addEventListener('change', function() {
-            localStorage.setItem('gemini_api_key', this.value);
+        document.getElementById('api-key-input').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') saveApiKey();
         });
+
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (!key) {
+                alert('Vui lòng nhập API Key trước khi lưu!');
+                document.getElementById('api-key-input').focus();
+                return;
+            }
+            localStorage.setItem('gemini_api_key', key);
+            const status = document.getElementById('save-api-status');
+            status.style.display = 'block';
+            setTimeout(() => { status.style.display = 'none'; }, 2000);
+        }
 
         document.getElementById('message-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
@@ -65,11 +105,11 @@
         async function sendMessage() {
             const messageInput = document.getElementById('message-input');
             const message = messageInput.value.trim();
-            const apiKey = document.getElementById('api-key-input').value.trim();
+            const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('api-key-input').value.trim();
 
             if (!message) return;
             if (!apiKey) {
-                alert('Vui lòng nhập Gemini API Key ở thanh bên trái!');
+                alert('Vui lòng nhập và Lưu API Key ở thanh bên trái!');
                 document.getElementById('api-key-input').focus();
                 return;
             }
@@ -93,19 +133,22 @@
 
                 typingIndicator.style.display = 'none';
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    throw new Error(`Lỗi parse JSON. Server có thể đã bị sập.`);
                 }
 
-                const data = await response.json();
-                if (data.error) {
-                    appendMessage('Lỗi: ' + data.error, 'bot');
-                } else {
-                    appendMessage(data.reply, 'bot', true);
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || `Lỗi HTTP: ${response.status}`);
                 }
+
+                appendMessage(data.reply, 'bot', true);
+                
             } catch (error) {
                 typingIndicator.style.display = 'none';
-                appendMessage('Đã xảy ra lỗi khi kết nối với máy chủ.', 'bot');
+                appendMessage('Lỗi: ' + error.message, 'bot');
                 console.error(error);
             }
         }
@@ -115,10 +158,22 @@
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', sender);
             
+            let contentHTML = '';
             if (parseMarkdown && sender === 'bot') {
-                messageDiv.innerHTML = marked.parse(text);
+                contentHTML = marked.parse(text);
             } else {
-                messageDiv.textContent = text;
+                contentHTML = `<p>${text}</p>`;
+            }
+
+            if (sender === 'bot') {
+                messageDiv.innerHTML = `
+                    <div class="avatar ai">AI</div>
+                    <div class="message-content">${contentHTML}</div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="message-content">${contentHTML}</div>
+                `;
             }
 
             const typingIndicator = document.getElementById('typing-indicator');
