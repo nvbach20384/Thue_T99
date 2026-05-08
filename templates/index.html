@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI RAG Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>Cài đặt</h2>
+        <label for="api-key-input">Gemini API Key:</label>
+        <input type="password" id="api-key-input" placeholder="Nhập API Key của bạn...">
+    </div>
+    <div id="main-chat">
+        <div id="chat-history"></div>
+        <div class="typing-indicator" id="typing-indicator">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="message-input" placeholder="Nhập câu hỏi của bạn..." autocomplete="off">
+            <button id="send-button" onclick="sendMessage()">Gửi</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = savedKey;
+            }
+        });
+
+        document.getElementById('api-key-input').addEventListener('change', function() {
+            localStorage.setItem('gemini_api_key', this.value);
+        });
+
+        document.getElementById('message-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            const apiKey = document.getElementById('api-key-input').value.trim();
+
+            if (!message) return;
+            if (!apiKey) {
+                alert('Vui lòng nhập Gemini API Key!');
+                return;
+            }
+
+            appendMessage(message, 'user');
+            messageInput.value = '';
+
+            const typingIndicator = document.getElementById('typing-indicator');
+            const chatHistory = document.getElementById('chat-history');
+            
+            typingIndicator.style.display = 'flex';
+            chatHistory.appendChild(typingIndicator);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, api_key: apiKey })
+                });
+
+                typingIndicator.style.display = 'none';
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    appendMessage('Lỗi: ' + data.error, 'bot');
+                } else {
+                    appendMessage(data.reply, 'bot', true);
+                }
+            } catch (error) {
+                typingIndicator.style.display = 'none';
+                appendMessage('Đã xảy ra lỗi khi kết nối với máy chủ.', 'bot');
+                console.error(error);
+            }
+        }
+
+        function appendMessage(text, sender, parseMarkdown = false) {
+            const chatHistory = document.getElementById('chat-history');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            
+            if (parseMarkdown && sender === 'bot') {
+                messageDiv.innerHTML = marked.parse(text);
+            } else {
+                messageDiv.textContent = text;
+            }
+
+            // Ensure typing indicator stays at the bottom
+            const typingIndicator = document.getElementById('typing-indicator');
+            if(typingIndicator.parentNode === chatHistory) {
+                chatHistory.insertBefore(messageDiv, typingIndicator);
+            } else {
+                chatHistory.appendChild(messageDiv);
+            }
+            
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+    </script>
+</body>
+</html>
